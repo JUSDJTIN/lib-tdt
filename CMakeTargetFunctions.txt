@@ -1,0 +1,108 @@
+#********************************************************************************
+#    Intel Architecture Group
+#    Copyright (C) 2018 Intel Corporation
+#********************************************************************************
+#
+#    INTEL CONFIDENTIAL
+#    This file, software, or program is supplied under the terms of a
+#    license agreement and/or nondisclosure agreement with Intel Corporation
+#    and may not be copied or disclosed except in accordance with the
+#    terms of that agreement.  This file, software, or program contains
+#    copyrighted material and/or trade secret information of Intel
+#    Corporation, and must be treated as such.  Intel reserves all rights
+#    in this material, except as the license agreement or nondisclosure
+#    agreement specifically indicate.
+#
+#    All rights reserved.  No part of this program or publication
+#    may be reproduced, transmitted, transcribed, stored in a
+#    retrieval system, or translated into any language or computer
+#    language, in any form or by any means, electronic, mechanical,
+#    magnetic, optical, chemical, manual, or otherwise, without
+#    the prior written permission of Intel Corporation.
+#
+#    Intel makes no warranty of any kind regarding this code.  This code
+#    is provided on an "As Is" basis and Intel will not provide any support,
+#    assistance, installation, training or other services.  Intel does not
+#    provide any updates, enhancements or extensions.  Intel specifically
+#    disclaims any warranty of merchantability, noninfringement, fitness
+#    for any particular purpose, or any other warranty.
+#
+#    Intel disclaims all liability, including liability for infringement
+#    of any proprietary rights, relating to use of the code.  No license,
+#    express or implied, by estoppel or otherwise, to any intellectual
+#    property rights is granted herein.
+#
+#********************************************************************************
+#
+#    @file   CMakeRelTargetFunctions.txt
+#
+#    @brief   Functions to be used in the release package
+#
+#
+#********************************************************************************
+CMAKE_MINIMUM_REQUIRED(VERSION ${CMAKE_MINIMUM_REQUIRED_VERSION})
+
+SET(CONFIGURATION_FILES_DIR             ${TDT_LIBRARY_DIR}/configuration)
+SET(REFERENCE_APP_DIR                   ${TDT_LIBRARY_DIR})
+SET(SIGNVERIFY_LIB_DIR                  ${REFERENCE_APP_DIR}/windows/signverify_lib)
+
+#Configure Deliverable Package
+FUNCTION(configureDeliverablePackage)
+ENDFUNCTION()
+
+#Get the list of plugins in directory
+FUNCTION(getAllPlugins)
+    FILE(GLOB PLUGIN_FILES_AND_DIRS LIST_DIRECTORIES TRUE ${PLUGIN_DIR}/*)
+    SET(PLUGIN_LIST_INTERNAL "")
+    FOREACH(child ${PLUGIN_FILES_AND_DIRS})
+        IF(IS_DIRECTORY ${child})
+          LIST(APPEND PLUGIN_LIST_INTERNAL ${child})
+        ENDIF(IS_DIRECTORY ${child})
+    ENDFOREACH(child ${PLUGIN_FILES_AND_DIRS})
+    SET(PLUGIN_LIST ${PLUGIN_LIST_INTERNAL} PARENT_SCOPE)
+ENDFUNCTION()
+
+#Add additional projects to the solution
+FUNCTION(addAdditionalProjects)
+    IF (${PLATFORM} STREQUAL  "linux")
+        SET(LIB_DEST_DIR ${BUILD_DIR}/${CMAKE_CFG_INTDIR}/lib)
+    ELSEIF (${PLATFORM} STREQUAL  "windows")
+        INCLUDE_EXTERNAL_MSPROJECT(IntelTM ${DRIVER_WINDOWS_DIR}/IntelTM.vcxproj)
+        #Support for Windows Signature verification
+        INCLUDE(${SIGNVERIFY_LIB_DIR}/CMakeLists.txt)
+        SET(LIB_DEST_DIR ${BUILD_DIR}/${CMAKE_CFG_INTDIR}/)
+        # Version Info File Description field data
+        SET(TDT_STRFILE_DESCRIPTION "Intel (R) TDT Reference Plugin.")
+    ENDIF(${PLATFORM} STREQUAL  "linux")
+
+    SET(LIB_EXT     ${CMAKE_SHARED_LIBRARY_SUFFIX})
+
+    #Include source code plugins
+    getAllPlugins()
+    FOREACH (PLUGIN ${PLUGIN_LIST})
+        IF (EXISTS ${PLUGIN}/CMakeLists.txt)
+            INCLUDE(${PLUGIN}/CMakeLists.txt)
+        ENDIF (EXISTS ${PLUGIN}/CMakeLists.txt)
+    ENDFOREACH (PLUGIN ${SOURCE_CODE_FORMAT_PLUGINS})
+
+ENDFUNCTION()
+
+# Intentionally empty function.  Do not update the version number in
+# source package build
+FUNCTION(configureVersion)
+ENDFUNCTION()
+
+
+#Post build event to copy precompiled binary files to binary directory
+FUNCTION(copyPrecompiledPluginToBinaryPackage)
+    #Copy precompiled plugins to binary directory
+    getAllPlugins()
+    FOREACH (PLUGIN ${PLUGIN_LIST})
+        IF (EXISTS ${PLUGIN}/lib)
+            ADD_CUSTOM_COMMAND(TARGET ${PROJECT_NAME}
+            POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_directory ${PLUGIN}/lib/. ${BUILD_DIR}/${CMAKE_CFG_INTDIR}/.
+            )
+        ENDIF (EXISTS ${PLUGIN}/lib)
+    ENDFOREACH (PLUGIN ${PLUGIN_LIST})
+ENDFUNCTION()

@@ -1,0 +1,274 @@
+#********************************************************************************
+#    Intel Architecture Group
+#    Copyright (C) 2019 Intel Corporation
+#********************************************************************************
+#
+#    INTEL CONFIDENTIAL
+#    This file, software, or program is supplied under the terms of a
+#    license agreement and/or nondisclosure agreement with Intel Corporation
+#    and may not be copied or disclosed except in accordance with the
+#    terms of that agreement.  This file, software, or program contains
+#    copyrighted material and/or trade secret information of Intel
+#    Corporation, and must be treated as such.  Intel reserves all rights
+#    in this material, except as the license agreement or nondisclosure
+#    agreement specifically indicate.
+#
+#    All rights reserved.  No part of this program or publication
+#    may be reproduced, transmitted, transcribed, stored in a
+#    retrieval system, or translated into any language or computer
+#    language, in any form or by any means, electronic, mechanical,
+#    magnetic, optical, chemical, manual, or otherwise, without
+#    the prior written permission of Intel Corporation.
+#
+#    Intel makes no warranty of any kind regarding this code.  This code
+#    is provided on an "As Is" basis and Intel will not provide any support,
+#    assistance, installation, training or other services.  Intel does not
+#    provide any updates, enhancements or extensions.  Intel specifically
+#    disclaims any warranty of merchantability, noninfringement, fitness
+#    for any particular purpose, or any other warranty.
+#
+#    Intel disclaims all liability, including liability for infringement
+#    of any proprietary rights, relating to use of the code.  No license,
+#    express or implied, by estoppel or otherwise, to any intellectual
+#    property rights is granted herein.
+#
+#********************************************************************************
+#
+#    @file   CMakeFunctions.txt
+#
+#    @brief   Common general functions and directories
+#
+#
+#********************************************************************************
+
+#Set Root directories
+SET(ROOT_DIR                            ${CMAKE_CURRENT_SOURCE_DIR})
+SET(APPLICATION_DIR                     ${ROOT_DIR}/Application)
+SET(DRIVER_DIR                          ${ROOT_DIR}/Driver)
+SET(EXTERNAL_DIR                        ${ROOT_DIR}/External)
+SET(BUILD_DIR                           ${ROOT_DIR}/build/bins/x64)
+SET(LIB_DIR                             ${ROOT_DIR}/build/libs/x64)
+SET(TOOLS_DIR                           ${ROOT_DIR}/Tools)
+SET(RELEASE_PACKAGE_DIR                 ${ROOT_DIR}/release_package)
+
+#Set Reference Application directories
+SET(REFERENCE_APP_DIR                   ${APPLICATION_DIR}/ReferenceApplication)
+SET(API_DIR                             ${APPLICATION_DIR}/API)
+SET(PLUGIN_DIR                          ${APPLICATION_DIR}/Plugins)
+SET(CONFIGURATION_FILES_DIR             ${REFERENCE_APP_DIR}/configuration)
+SET(APPLICATION_COMMON_DIR              ${APPLICATION_DIR}/ApplicationCommon)
+SET(SIGNVERIFY_LIB_DIR                  ${APPLICATION_COMMON_DIR}/windows/signverify_lib)
+SET(TDT_LIBRARY_DIR                     ${APPLICATION_DIR}/library)
+
+#Set TDT Library Test Application directories
+SET(TDT_LIBRARY_TEST_APP_DIR            ${APPLICATION_DIR}/TDTLibTestApp)
+
+#Set Plug-in directories
+SET(PLUGIN_COMMON_DIR                   ${PLUGIN_DIR}/common)
+SET(PLUGIN_OS_ABSTRACTION_DIR           ${PLUGIN_COMMON_DIR}/os_abstraction)
+SET(PLUGIN_CONSOLE_REPORTER_DIR         ${PLUGIN_DIR}/console_reporter)
+SET(PLUGIN_LIBRARY_REPORTER_DIR         ${PLUGIN_DIR}/library_reporter)
+SET(PLUGIN_PROCESS_MONITOR_DIR          ${PLUGIN_DIR}/process_monitor)
+SET(PLUGIN_PMU_PUBLISHER_DIR            ${PLUGIN_DIR}/pmu_publisher)
+SET(PLUGIN_BOISE_HEURISTIC_DIR          ${PLUGIN_DIR}/boise_heuristic)
+SET(PLUGIN_CSV_TELEMETRY_RECORDER_DIR   ${PLUGIN_DIR}/csv_telemetry_recorder)
+SET(PLUGIN_FILE_REPORTER_DIR            ${PLUGIN_DIR}/file_reporter)
+SET(PLUGIN_TELEMETRY_DATA_REPLAYER_DIR  ${PLUGIN_DIR}/telemetry_data_replayer)
+SET(PLUGIN_NORMALIZER_DIR               ${PLUGIN_DIR}/normalizer)
+SET(PLUGIN_NORMALIZER_LIB_DIR           ${PLUGIN_DIR}/normalizer_lib)
+SET(PLUGIN_RANDOM_FOREST_CLASSIFIER_DIR ${PLUGIN_DIR}/random_forest_classifier)
+SET(PLUGIN_HOTSPOT_DETECTOR_DIR         ${PLUGIN_DIR}/hotspot_detector)
+SET(PLUGIN_KAFKA_REPORTER_DIR           ${PLUGIN_DIR}/kafka_reporter)
+SET(LIBRDKAFKA_VERSION 0.11.6)
+
+#Set Driver include directories
+SET(DRIVER_WINDOWS_DIR                  ${ROOT_DIR}/Driver/Windows)
+SET(DRIVER_WINDOWS_INC_DIR              ${DRIVER_WINDOWS_DIR}/inc)
+SET(DRIVER_INCLUDE_DIR                  ${DRIVER_DIR}/include)
+
+#Set External directories
+SET(EXTERNAL_BOOST_DIR                  ${EXTERNAL_DIR}/boost_1_68_0)
+SET(EXTERNAL_TBB_DIR                    ${EXTERNAL_DIR}/tbb2019_20180718oss)
+IF (${PLATFORM} STREQUAL  "linux")
+SET(EXTERNAL_TBB_LIBS                  ${EXTERNAL_TBB_DIR}/lib/intel64/gcc4.7)
+ELSEIF (${PLATFORM} STREQUAL  "windows")
+SET(EXTERNAL_TBB_BINS                   ${EXTERNAL_TBB_DIR}/bin/intel64/vc14)
+ENDIF (${PLATFORM} STREQUAL  "linux")
+SET(EXTERNAL_MBUILD_DIR                 ${EXTERNAL_DIR}/mbuild)
+SET(EXTERNAL_XED_DIR                    ${EXTERNAL_DIR}/xed)
+SET(EXTERNAL_XED_INCLUDE_DIR            ${EXTERNAL_XED_DIR}/include/public/xed)
+SET(EXTERNAL_XED_OBJ_DIR                ${EXTERNAL_XED_DIR}/obj)
+SET(OPENSSL_DIR                         ${EXTERNAL_DIR}/openssl)
+SET(KAFKA_CLIENT_DIR                    ${EXTERNAL_DIR}/kafkaclient)
+
+#Set Tools directories
+SET(INSTALLER_WIN_DRIVER_DIR            ${TOOLS_DIR}/InstallDriver/Windows)
+SET(NORMALIZER_TOOL_DIR                 ${TOOLS_DIR}/NormalizerTool)
+SET(DIGRAPH_DIR                         ${TOOLS_DIR}/digraph)
+
+#configure compiler flags and cmake flags
+FUNCTION(configureCompilerFlags)
+    #Set VALIDATION_FEATURES
+    IF(DEFINED ENABLE_VALIDATION_FEATURES)
+        MESSAGE ("Building with Validation features")
+        SET (VALIDATION_FEATURES ON CACHE INTERNAL "" FORCE)
+        SET(ignoreMe "${ENABLE_VALIDATION_FEATURES}")
+    ELSE ()
+        MESSAGE ("Building shipping solution")
+    ENDIF (DEFINED ENABLE_VALIDATION_FEATURES)
+
+    #Set Code Signing
+    IF(DEFINED ENABLE_CODE_SIGNING)
+        SET(SIGNING_ENABLED ON CACHE INTERNAL "" FORCE)
+        SET(SIGNFILE "${TOOLS_DIR}/3rdParty/signfile/SignFile.exe" CACHE INTERNAL "" FORCE)
+        SET(ignoreMe "${ENABLE_CODE_SIGNING}")
+     ENDIF(DEFINED ENABLE_CODE_SIGNING)
+
+     #Set Signature verification
+    IF(DEFINED ENABLE_SIGNATURE_VERIFICATION)
+        ADD_DEFINITIONS(-DSIGNATURE_VERIFICATION)
+        SET(ignoreMe "${ENABLE_SIGNATURE_VERIFICATION}")
+    ELSE()
+        # Undefine Signature verification
+        ADD_DEFINITIONS(-USIGNATURE_VERIFICATION)
+    ENDIF(DEFINED ENABLE_SIGNATURE_VERIFICATION)
+
+    IF (${PLATFORM} STREQUAL  "linux")
+        MESSAGE ("Building Solution for Linux")
+        SET(CMAKE_C_COMPILER "gcc")
+        SET(CMAKE_CXX_COMPILER "g++")
+        SET(CMAKE_CXX_FLAGS "-std=c++11 -pthread -Wall -Werror -Wformat -Wformat-security -fstack-protector-strong -fPIE -fPIC " CACHE INTERNAL "" FORCE)
+        # Set rpath to current dir. depending on distribution following will generate rpath or runpath.
+        SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wl,-rpath,./ " CACHE INTERNAL "" FORCE)
+        SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wl,--disable-new-dtags " CACHE INTERNAL "" FORCE)
+        SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -DDEBUG" CACHE INTERNAL "" FORCE)
+        SET(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O2 -s" CACHE INTERNAL "" FORCE)
+        ADD_DEFINITIONS(-DDRV_OS_LINUX)
+        ADD_DEFINITIONS(-DDRV_EM64T)
+        # SDL recommended flags
+        ADD_DEFINITIONS(-D"_FORTIFY_SOURCE=2")
+        LINK_LIBRARIES("-z noexecstack")
+        LINK_LIBRARIES("-z relro -z now")
+        # SDL: With Position Independent Execution linkage set the boost static libraries fail linking LINK_LIBRARIES("-pie")
+        LINK_LIBRARIES("-ldl")
+
+    ELSEIF (${PLATFORM} STREQUAL  "windows")
+
+        MESSAGE ("Building Solution for Windows")
+        ADD_DEFINITIONS(-DUNICODE)
+        ADD_DEFINITIONS(-D_UNICODE)
+        ADD_DEFINITIONS(-DDRV_OS_WINDOWS)
+        ADD_DEFINITIONS(-DDRV_EM64T)
+        ADD_DEFINITIONS(-D_SCL_SECURE_NO_WARNINGS) # disable checked iterator warning on windows
+        # wd4503 disable warning "'identifier' : decorated name length exceeded, name was truncated" on windows
+        # wd4702 disable 'unreachable code' warning since boost is triggering it on windows
+        SET(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT /GS /sdl /guard:cf /WX /W4 /wd4503 /wd4702" CACHE INTERNAL "" FORCE)
+        SET(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELEASE} /MT /GS /sdl /guard:cf /WX /W4 /wd4503 /wd4702" CACHE INTERNAL "" FORCE)
+        SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd /ZI /GS /sdl /WX /W4 /wd4503 /wd4702" CACHE INTERNAL "" FORCE)
+        IF (${CMAKE_GENERATOR} STREQUAL "Ninja")
+            SET(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} /DYNAMICBASE /NXCOMPAT /INCREMENTAL" CACHE INTERNAL "" FORCE)
+            SET(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /DYNAMICBASE /NXCOMPAT /INCREMENTAL" CACHE INTERNAL "" FORCE)
+            SET(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} /DYNAMICBASE /NXCOMPAT /INCREMENTAL" CACHE INTERNAL "" FORCE)
+        ELSE ()
+            SET(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} /DYNAMICBASE /NXCOMPAT /INCREMENTAL /HIGHENTROPYVA" CACHE INTERNAL "" FORCE)
+            SET(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /DYNAMICBASE /NXCOMPAT /INCREMENTAL /HIGHENTROPYVA" CACHE INTERNAL "" FORCE)
+            SET(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} /DYNAMICBASE /NXCOMPAT /INCREMENTAL /HIGHENTROPYVA" CACHE INTERNAL "" FORCE)
+
+        ENDIF ()
+    ENDIF (${PLATFORM} STREQUAL  "linux")
+
+ENDFUNCTION()
+
+#set output directory for each configuration type
+FUNCTION(configureOutputDirectories)
+
+    #Set target platform
+    SET(ARCH_DIRECTORY x64)
+
+    #Set output directories
+    SET(BINS ${CMAKE_CURRENT_SOURCE_DIR}/build/bins/${ARCH_DIRECTORY})
+    SET(LIBS ${CMAKE_CURRENT_SOURCE_DIR}/build/libs/${ARCH_DIRECTORY})
+
+    SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${BINS} PARENT_SCOPE)
+    IF (${PLATFORM} STREQUAL  "linux")
+        SET(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${BINS} PARENT_SCOPE)
+    ELSEIF (${PLATFORM} STREQUAL  "windows")
+        SET(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${LIBS} PARENT_SCOPE)
+    ENDIF(${PLATFORM} STREQUAL  "linux")
+    SET(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${LIBS} PARENT_SCOPE)
+
+    IF (${CMAKE_HOST_SYSTEM_NAME} STREQUAL  "Windows")
+        #Second, for multi-config builds (e.g. msvc)
+        FOREACH (OUTPUTCONFIG ${CMAKE_CONFIGURATION_TYPES})
+            STRING(TOUPPER ${OUTPUTCONFIG} UPPEROUTPUTCONFIG)
+            SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY_${UPPEROUTPUTCONFIG} ${BINS}/${OUTPUTCONFIG} PARENT_SCOPE)
+            SET(CMAKE_LIBRARY_OUTPUT_DIRECTORY_${UPPEROUTPUTCONFIG} ${LIBS}/${OUTPUTCONFIG} PARENT_SCOPE)
+            SET(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_${UPPEROUTPUTCONFIG} ${LIBS}/${OUTPUTCONFIG} PARENT_SCOPE)
+        ENDFOREACH (OUTPUTCONFIG CMAKE_CONFIGURATION_TYPES)
+    ENDIF (${CMAKE_HOST_SYSTEM_NAME} STREQUAL  "Windows")
+
+ENDFUNCTION()
+
+#Configure configuration build types
+FUNCTION(configureBuildTypes)
+    IF (${PLATFORM} STREQUAL  "windows")
+        #Configuration Types, Release, Debug and Release with Debug Info
+        IF (NOT DEFINED CMAKE_EXPORT_COMPILE_COMMANDS)
+            LIST(REMOVE_DUPLICATES CMAKE_CONFIGURATION_TYPES)
+        ENDIF (NOT DEFINED CMAKE_EXPORT_COMPILE_COMMANDS)
+        SET(CMAKE_CONFIGURATION_TYPES Release Debug RelWithDebInfo)
+        SET(CMAKE_CONFIGURATION_TYPES "${CMAKE_CONFIGURATION_TYPES}" CACHE TYPE STRING FORCE)
+    ENDIF (${PLATFORM} STREQUAL  "windows")
+ENDFUNCTION()
+
+# Create .rc files for plugin dlls
+FUNCTION(createPluginRcFile destPath)
+    #The version info is not set when building from the source package.
+    IF(TDT_VERSION_MAJOR)
+        CONFIGURE_FILE( ${PLUGIN_DIR}/plugin.rc.in
+                        ${destPath}/${PROJECT_NAME}.rc)
+    ENDIF(TDT_VERSION_MAJOR)
+ENDFUNCTION()
+
+# Configure Windows Code signing command for plugin dlls
+FUNCTION(configurePluginSigningCommand)
+    #Windows Code Signinig operation
+    IF (${SIGNING_ENABLED})
+        SET(PLUGIN_SIGNING_COMMAND    "${SIGNFILE}" "${LIB_DEST_DIR}${PROJECT_NAME}${LIB_EXT}" PARENT_SCOPE)
+    ENDIF (${SIGNING_ENABLED})
+ENDFUNCTION()
+
+# Obtain visual studio script to have a visual studio console (vcvarsall.bat)
+FUNCTION(getVisualStudioEnvironmentScript)
+    IF (NOT ${CMAKE_GENERATOR} STREQUAL "Ninja")
+        GET_FILENAME_COMPONENT(LINKER_DIR ${CMAKE_LINKER} DIRECTORY)
+        FIND_FILE(VISUAL_STUDIO_ENVIRONMENT vcvarsall.bat
+            "${LINKER_DIR}/.." "${LINKER_DIR}/../..")
+        IF (NOT EXISTS ${VISUAL_STUDIO_ENVIRONMENT})
+            MESSAGE(FATAL_ERROR "Unable to determine path to vcvarsall.bat ")
+        ENDIF (NOT EXISTS ${VISUAL_STUDIO_ENVIRONMENT})
+    ENDIF (NOT ${CMAKE_GENERATOR} STREQUAL "Ninja")
+ENDFUNCTION()
+
+FUNCTION(GetExternalLibrariesReferences)
+
+    #import boost
+    SET(Boost_NO_SYSTEM_PATHS ON)
+    SET(Boost_USE_MULTITHREADED ON)
+    SET(Boost_USE_STATIC_LIBS ON)
+    SET(Boost_USE_STATIC_RUNTIME ON)
+    SET(BOOST_ALL_DYN_LINK OFF)
+    SET(BOOST_ROOT ${EXTERNAL_BOOST_DIR})
+    FIND_PACKAGE(Boost COMPONENTS program_options filesystem atomic REQUIRED)
+    SET_TARGET_PROPERTIES(Boost::program_options PROPERTIES IMPORTED_GLOBAL TRUE)
+    SET_TARGET_PROPERTIES(Boost::filesystem PROPERTIES IMPORTED_GLOBAL TRUE)
+    SET_TARGET_PROPERTIES(Boost::atomic PROPERTIES IMPORTED_GLOBAL TRUE)
+    SET(Boost_LIBRARIES ${Boost_LIBRARIES} CACHE INTERNAL "" FORCE)
+    SET(Boost_INCLUDE_DIRS ${Boost_INCLUDE_DIRS}  CACHE INTERNAL "" FORCE)
+
+    #import TBB
+    SET(TBB_DIR ${EXTERNAL_TBB_DIR}/cmake)
+    FIND_PACKAGE(TBB REQUIRED tbb)
+    SET(TBB_IMPORTED_TARGETS ${TBB_IMPORTED_TARGETS} CACHE INTERNAL "" FORCE)
+
+ENDFUNCTION()
