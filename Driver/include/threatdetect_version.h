@@ -1,13 +1,14 @@
-/****
- * -------------------------------------------------------------------------
- *               INTEL CORPORATION PROPRIETARY INFORMATION
- *  This software is supplied under the terms of the accompanying license
- *  agreement or nondisclosure agreement with Intel Corporation and may not
- *  be copied or disclosed except in accordance with the terms of that
- *  agreement.
- *        Copyright(C) 2018 Intel Corporation.  All Rights Reserved.
- * -------------------------------------------------------------------------
- ****/
+/*
+********************************************************************************
+**    Copyright (C) 2019 Intel Corporation
+**    SPDX-License-Identifier: BSD-3-Clause
+********************************************************************************
+**
+**    @file   threatdetect_version.h
+**
+********************************************************************************
+*/
+
 
 #ifndef _THREATDETECT_VERSION_H_
 #define _THREATDETECT_VERSION_H_

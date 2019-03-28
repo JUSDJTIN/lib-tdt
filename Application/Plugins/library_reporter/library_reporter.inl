@@ -1,39 +1,8 @@
 /*
 ********************************************************************************
-**    Intel Architecture Group
 **    Copyright (C) 2019 Intel Corporation
+**    SPDX-License-Identifier: BSD-3-Clause
 ********************************************************************************
-**
-**    INTEL CONFIDENTIAL
-**    This file, software, or program is supplied under the terms of a
-**    license agreement and/or nondisclosure agreement with Intel Corporation
-**    and may not be copied or disclosed except in accordance with the
-**    terms of that agreement.  This file, software, or program contains
-**    copyrighted material and/or trade secret information of Intel
-**    Corporation, and must be treated as such.  Intel reserves all rights
-**    in this material, except as the license agreement or nondisclosure
-**    agreement specifically indicate.
-**
-**    All rights reserved.  No part of this program or publication
-**    may be reproduced, transmitted, transcribed, stored in a
-**    retrieval system, or translated into any language or computer
-**    language, in any form or by any means, electronic, mechanical,
-**    magnetic, optical, chemical, manual, or otherwise, without
-**    the prior written permission of Intel Corporation.
-**
-**    Intel makes no warranty of any kind regarding this code.  This code
-**    is provided on an "As Is" basis and Intel will not provide any support,
-**    assistance, installation, training or other services.  Intel does not
-**    provide any updates, enhancements or extensions.  Intel specifically
-**    disclaims any warranty of merchantability, noninfringement, fitness
-**    for any particular purpose, or any other warranty.
-**
-**    Intel disclaims all liability, including liability for infringement
-**    of any proprietary rights, relating to use of the code.  No license,
-**    express or implied, by estoppel or otherwise, to any intellectual
-**    property rights is granted herein.
-**/
-/********************************************************************************
 **
 **    @file   library_reporter.inl
 **
@@ -258,7 +227,6 @@ namespace bit_shovel_plugins
             try
             {
                 auto child_node = config.get_child(m_profile_name + ".cve_ids");
-
                 bit_shovel::plugin_config_t temp_config;
                 temp_config.add_child("cve_ids", child_node);
                 std::stringstream ss;
@@ -310,6 +278,91 @@ namespace bit_shovel_plugins
         }
 
         template<class stream_initializer_t>
+        bit_shovel::result_type library_reporter_templ<stream_initializer_t>::_handle_bkc_mode(
+            const bit_shovel::channel_registry& registry,
+            bit_shovel::data_network& network)
+        {
+            bit_shovel::result_type result;  // success by default
+            // check dependencies - pmu publisher plugin should be available
+            if (registry.get_sources<hw_telemetry_records_t>().empty())
+            {
+                result.add_failure() << "Dependency failure: unable to find "
+                    "required source of hw_telemetry_records_t."
+                    << std::endl;
+            }
+            else
+            {
+                auto node = std::make_shared<function_node<hw_telemetry_records_t, bool>>(
+                    network.graph(),
+                    1,
+                    [this, &network](const hw_telemetry_records_t& data) -> bool
+                    {
+                        if (data != nullptr && !data->empty())
+                        {
+                            network.push<bit_shovel::pipeline_message_t>(
+                            { bit_shovel::pipeline_message_type_t::notify,
+                                this->id(),
+                                "{\"telemetry\": {\"available\": true}}" });
+                        }
+                        return true;
+                    });
+
+                // register with network
+                // lazy eval means the second term won't run if success == false
+                result = network.add_sink_node<hw_telemetry_records_t>(node);
+            }
+
+            return result;
+        }
+
+        template<class stream_initializer_t>
+        template<class detection_t>
+        void library_reporter_templ<stream_initializer_t>::_send_notification(
+            const detection_t& event,
+            bit_shovel::data_network& network,
+            std::stringstream& out_stream)
+        {
+            if (_throttle_notifications(out_stream, event))
+            {
+                _output_event(out_stream,
+                    const_cast<detection_t&>(event),
+                    true);
+                out_stream << "\"eof\":null}}" << std::endl;
+
+                network.push<bit_shovel::pipeline_message_t>(
+                {
+                    bit_shovel::pipeline_message_type_t::notify,
+                    this->id(),
+                    out_stream.str()
+                });
+                out_stream.str("");
+            }
+        }
+
+        template<class stream_initializer_t>
+        template<class detection_event_list_t, class detection_t>
+        bit_shovel::result_type library_reporter_templ<stream_initializer_t>::_configure_node_to_detect_event(
+            bit_shovel::data_network& network,
+            std::stringstream& out_stream)
+        {
+            bit_shovel::result_type result;  // success by default
+            auto node = std::make_shared<function_node<detection_event_list_t>>(
+                network.graph(),
+                1,
+                [this, &out_stream, &network](const detection_event_list_t& events)
+                {
+                    for (auto& event : events)
+                    {
+                        _send_notification<detection_t>(event, network, out_stream);
+                    }
+                });
+
+            result = network.add_sink_node<detection_event_list_t>(node);
+
+            return result;
+        }
+
+        template<class stream_initializer_t>
         bit_shovel::result_type library_reporter_templ<stream_initializer_t>::init(
             const bit_shovel::channel_registry& registry,
             bit_shovel::data_network& network,
@@ -332,146 +385,56 @@ namespace bit_shovel_plugins
                                      << " plugin failed." << std::endl;
             }
 
-            // in try-catch block as get_sources() and get_sinks can throw exceptions from
-            // boost::any_cast
-            try
+            if (result)
             {
-                if (result &&
-                    registry.get_sources<detection_event_with_process_name_list_t>().empty() &&
-                    registry.get_sources<detection_event_list_t>().empty())
+                // in try-catch block as get_sources() and get_sinks can throw exceptions from
+                // boost::any_cast
+                try
                 {
-                    result.add_failure()
-                        << "Dependency failure: unable to find required source of "
-                           "detection_event_list_t or detection_event_with_process_name_list_t."
-                        << std::endl;
-                }
-                if (result)
-                {  // BKC Test App support: check for reception of telmetry data and notify.
-                    // the following config param needs to be present in profile used by BKC Test
-                    // App
                     auto bkc_mode = config.get<bool>(this->id() + ".bkc_mode", false);
                     if (bkc_mode)
                     {
-                        bool rfc_norm_plugins_present = false;
-                        try
-                        {  // in BKC Test app profile, the random forest and normalizer plugin
-                           // should not be present.
-                            config.get<double>(
-                                "random_forest_classifier.attack_probability_threshold");
-                            config.get<uint64_t>("normalizer.model.timestamp_delta");
-                            rfc_norm_plugins_present = true;
-                        }
-                        catch (const boost::property_tree::ptree_error&)
-                        {}
-                        if (!rfc_norm_plugins_present)
-                        {
-                            // check dependencies - pmu publisher plugin should be available
-                            if (registry.get_sources<hw_telemetry_records_t>().empty())
-                            {
-                                result.add_failure() << "Dependency failure: unable to find "
-                                                        "required source of hw_telemetry_records_t."
-                                                     << std::endl;
-                            }
-                            else
-                            {
-                                auto node =
-                                    std::make_shared<function_node<hw_telemetry_records_t, bool>>(
-                                        network.graph(),
-                                        1,
-                                        [this, &network](
-                                            const hw_telemetry_records_t& data) -> bool {
-                                            if (data != nullptr && !data->empty())
-                                            {
-                                                network.push<bit_shovel::pipeline_message_t>(
-                                                    {bit_shovel::pipeline_message_type_t::notify,
-                                                        this->id(),
-                                                        "{\"telemetry\": {\"available\": true}}"});
-                                            }
-                                            return true;
-                                        });
+                        bool detections_enabled = !registry.get_sources<detection_event_list_t>().empty() ||
+                            !registry.get_sources<detection_event_with_process_name_list_t>().empty();
 
-                                // register with network
-                                // lazy eval means the second term won't run if success == false
-                                result = network.add_sink_node<hw_telemetry_records_t>(node);
-                            }
+                        if (detections_enabled)
+                        {
+                            result.add_failure()
+                                << "Threat detections not allowed in BKC mode." << std::endl;
+                        }
+                        else
+                        {// BKC Test App support: configure for receiving of telmetry data and notify.
+                            result = _handle_bkc_mode(registry, network);
+                        }
+                    }
+                    else
+                    {
+                        _load_config(config);
+                        _init_preamble_cache(config);
+                        if (!registry.get_sources<detection_event_with_process_name_list_t>().empty())
+                        {// add the node to report to pipeline and report detection info with process name
+                            result = _configure_node_to_detect_event<detection_event_with_process_name_list_t,
+                                detection_event_with_process_name_t>(network, out_stream);
+                        }
+                        else if (!registry.get_sources<detection_event_list_t>().empty())
+                        {// otherwise add the node to report to pipeline and just report raw  detection info
+                            result = _configure_node_to_detect_event<detection_event_list_t,
+                                detection_event_t>(network, out_stream);
                         }
                         else
                         {
                             result.add_failure()
-                                << "BKC Test mode: not required plugins are present." << std::endl;
+                                << "Dependency failure: unable to find required source of "
+                                "detection_event_list_t or detection_event_with_process_name_list_t."
+                                << std::endl;
                         }
                     }
                 }
-                if (result)
+                catch (boost::bad_any_cast& e)
                 {
-                    _load_config(config);
-                    _init_preamble_cache(config);
-                    // do we have the process_monitor plugin?
-                    if (!registry.get_sources<detection_event_with_process_name_list_t>().empty())
-                    {
-                        // if so, grab the process name for display
-                        // add the node to report to pipeline
-                        auto node = std::make_shared<
-                            function_node<detection_event_with_process_name_list_t>>(
-                            network.graph(),
-                            1,
-                            [this, &out_stream, &network](
-                                const detection_event_with_process_name_list_t& events) {
-                                for (auto& event : events)
-                                {
-                                    if (_throttle_notifications(out_stream, event))
-                                    {
-                                        _output_event(out_stream,
-                                            const_cast<detection_event_with_process_name_t&>(event),
-                                            true);
-                                        out_stream << "\"eof\":null}}" << std::endl;
-
-                                        network.push<bit_shovel::pipeline_message_t>(
-                                            {bit_shovel::pipeline_message_type_t::notify,
-                                                this->id(),
-                                                out_stream.str()});
-                                        out_stream.str("");
-                                    }
-                                }
-                            });
-
-                        result =
-                            network.add_sink_node<detection_event_with_process_name_list_t>(node);
-                    }
-                    else
-                    {
-                        // otherwise, just report raw  detection info
-                        // add the node to report to pipeline
-                        auto node = std::make_shared<function_node<detection_event_list_t>>(
-                            network.graph(),
-                            1,
-                            [this, &out_stream, &network](const detection_event_list_t& events) {
-                                for (auto& event : events)
-                                {
-                                    if (_throttle_notifications(out_stream, event))
-                                    {
-                                        _output_event(out_stream,
-                                            const_cast<detection_event_t&>(event),
-                                            false);
-                                        out_stream << "\"eof\":null}}" << std::endl;
-
-                                        network.push<bit_shovel::pipeline_message_t>(
-                                            {bit_shovel::pipeline_message_type_t::notify,
-                                                this->id(),
-                                                out_stream.str()});
-                                        out_stream.str("");
-                                    }
-                                }
-                            });
-
-                        result = network.add_sink_node<detection_event_list_t>(node);
-                    }
+                    result.add_failure() << "library_reporter_templ<stream_initializer_t>::init "
+                                         << e.what() << std::endl;
                 }
-            }
-            catch (boost::bad_any_cast& e)
-            {
-                result.add_failure() << "library_reporter_templ<stream_initializer_t>::init "
-                                     << e.what() << std::endl;
             }
 
             return result;
