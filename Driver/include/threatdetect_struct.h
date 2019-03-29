@@ -9,7 +9,6 @@
 ********************************************************************************
 */
 
-
 #ifndef __THREATDETECT_STRUCT_H__
 #define __THREATDETECT_STRUCT_H__
 

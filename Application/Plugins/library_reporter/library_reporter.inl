@@ -287,25 +287,24 @@ namespace bit_shovel_plugins
             if (registry.get_sources<hw_telemetry_records_t>().empty())
             {
                 result.add_failure() << "Dependency failure: unable to find "
-                    "required source of hw_telemetry_records_t."
-                    << std::endl;
+                                        "required source of hw_telemetry_records_t."
+                                     << std::endl;
             }
             else
             {
-                auto node = std::make_shared<function_node<hw_telemetry_records_t, bool>>(
-                    network.graph(),
-                    1,
-                    [this, &network](const hw_telemetry_records_t& data) -> bool
-                    {
-                        if (data != nullptr && !data->empty())
-                        {
-                            network.push<bit_shovel::pipeline_message_t>(
-                            { bit_shovel::pipeline_message_type_t::notify,
-                                this->id(),
-                                "{\"telemetry\": {\"available\": true}}" });
-                        }
-                        return true;
-                    });
+                auto node =
+                    std::make_shared<function_node<hw_telemetry_records_t, bool>>(network.graph(),
+                        1,
+                        [this, &network](const hw_telemetry_records_t& data) -> bool {
+                            if (data != nullptr && !data->empty())
+                            {
+                                network.push<bit_shovel::pipeline_message_t>(
+                                    {bit_shovel::pipeline_message_type_t::notify,
+                                        this->id(),
+                                        "{\"telemetry\": {\"available\": true}}"});
+                            }
+                            return true;
+                        });
 
                 // register with network
                 // lazy eval means the second term won't run if success == false
@@ -324,33 +323,26 @@ namespace bit_shovel_plugins
         {
             if (_throttle_notifications(out_stream, event))
             {
-                _output_event(out_stream,
-                    const_cast<detection_t&>(event),
-                    true);
+                _output_event(out_stream, const_cast<detection_t&>(event), true);
                 out_stream << "\"eof\":null}}" << std::endl;
 
                 network.push<bit_shovel::pipeline_message_t>(
-                {
-                    bit_shovel::pipeline_message_type_t::notify,
-                    this->id(),
-                    out_stream.str()
-                });
+                    {bit_shovel::pipeline_message_type_t::notify, this->id(), out_stream.str()});
                 out_stream.str("");
             }
         }
 
         template<class stream_initializer_t>
         template<class detection_event_list_t, class detection_t>
-        bit_shovel::result_type library_reporter_templ<stream_initializer_t>::_configure_node_to_detect_event(
+        bit_shovel::result_type
+        library_reporter_templ<stream_initializer_t>::_configure_node_to_detect_event(
             bit_shovel::data_network& network,
             std::stringstream& out_stream)
         {
             bit_shovel::result_type result;  // success by default
-            auto node = std::make_shared<function_node<detection_event_list_t>>(
-                network.graph(),
+            auto node = std::make_shared<function_node<detection_event_list_t>>(network.graph(),
                 1,
-                [this, &out_stream, &network](const detection_event_list_t& events)
-                {
+                [this, &out_stream, &network](const detection_event_list_t& events) {
                     for (auto& event : events)
                     {
                         _send_notification<detection_t>(event, network, out_stream);
@@ -394,8 +386,10 @@ namespace bit_shovel_plugins
                     auto bkc_mode = config.get<bool>(this->id() + ".bkc_mode", false);
                     if (bkc_mode)
                     {
-                        bool detections_enabled = !registry.get_sources<detection_event_list_t>().empty() ||
-                            !registry.get_sources<detection_event_with_process_name_list_t>().empty();
+                        bool detections_enabled =
+                            !registry.get_sources<detection_event_list_t>().empty() ||
+                            !registry.get_sources<detection_event_with_process_name_list_t>()
+                                 .empty();
 
                         if (detections_enabled)
                         {
@@ -403,7 +397,8 @@ namespace bit_shovel_plugins
                                 << "Threat detections not allowed in BKC mode." << std::endl;
                         }
                         else
-                        {// BKC Test App support: configure for receiving of telmetry data and notify.
+                        {  // BKC Test App support: configure for receiving of telmetry data and
+                           // notify.
                             result = _handle_bkc_mode(registry, network);
                         }
                     }
@@ -411,13 +406,17 @@ namespace bit_shovel_plugins
                     {
                         _load_config(config);
                         _init_preamble_cache(config);
-                        if (!registry.get_sources<detection_event_with_process_name_list_t>().empty())
-                        {// add the node to report to pipeline and report detection info with process name
-                            result = _configure_node_to_detect_event<detection_event_with_process_name_list_t,
+                        if (!registry.get_sources<detection_event_with_process_name_list_t>()
+                                 .empty())
+                        {  // add the node to report to pipeline and report detection info with
+                           // process name
+                            result = _configure_node_to_detect_event<
+                                detection_event_with_process_name_list_t,
                                 detection_event_with_process_name_t>(network, out_stream);
                         }
                         else if (!registry.get_sources<detection_event_list_t>().empty())
-                        {// otherwise add the node to report to pipeline and just report raw  detection info
+                        {  // otherwise add the node to report to pipeline and just report raw
+                           // detection info
                             result = _configure_node_to_detect_event<detection_event_list_t,
                                 detection_event_t>(network, out_stream);
                         }
@@ -425,7 +424,8 @@ namespace bit_shovel_plugins
                         {
                             result.add_failure()
                                 << "Dependency failure: unable to find required source of "
-                                "detection_event_list_t or detection_event_with_process_name_list_t."
+                                   "detection_event_list_t or "
+                                   "detection_event_with_process_name_list_t."
                                 << std::endl;
                         }
                     }

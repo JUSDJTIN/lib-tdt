@@ -90,7 +90,8 @@ namespace bit_shovel_plugins
                 bit_shovel::data_network& network);
 
             template<class detection_event_list_t, class detection_t>
-            bit_shovel::result_type _configure_node_to_detect_event(bit_shovel::data_network& network,
+            bit_shovel::result_type _configure_node_to_detect_event(
+                bit_shovel::data_network& network,
                 std::stringstream& out_stream);
 
             template<class detection_t>

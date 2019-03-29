@@ -9,7 +9,6 @@
 ********************************************************************************
 */
 
-
 #ifndef _THREATDETECT_TYPES_H_
 #define _THREATDETECT_TYPES_H_
 
