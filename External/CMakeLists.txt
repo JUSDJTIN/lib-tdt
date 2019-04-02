@@ -120,7 +120,11 @@ IF ((NOT EXISTS ${EXTERNAL_BOOST_DIR}/stage) AND (NOT ${CMAKE_GENERATOR} STREQUA
     IF (${PLATFORM} STREQUAL  "linux")
         SET(COMPILER_FLAGS cflags=-fPIC)
     ENDIF (${PLATFORM} STREQUAL  "linux")
-    EXECUTE_PROCESS(COMMAND ${EXTERNAL_BOOST_DIR}/b2 threading=multi runtime-link=static ${COMPILER_FLAGS} --abbreviate-paths -j4 --with-system --with-filesystem --with-program_options --with-atomic --with-date_time
+    SET (NUMBER_OF_PARALLEL_THREADS 1)
+    IF (DEFINED ENV{CMAKE_BUILD_PARALLEL_LEVEL})
+        SET(NUMBER_OF_PARALLEL_THREADS $ENV{CMAKE_BUILD_PARALLEL_LEVEL})
+    ENDIF(DEFINED ENV{CMAKE_BUILD_PARALLEL_LEVEL})
+    EXECUTE_PROCESS(COMMAND ${EXTERNAL_BOOST_DIR}/b2 threading=multi runtime-link=static ${COMPILER_FLAGS} --abbreviate-paths -j${NUMBER_OF_PARALLEL_THREADS} --with-system --with-filesystem --with-program_options --with-atomic --with-date_time
         WORKING_DIRECTORY   ${EXTERNAL_BOOST_DIR})
 ENDIF ((NOT EXISTS ${EXTERNAL_BOOST_DIR}/stage) AND (NOT ${CMAKE_GENERATOR} STREQUAL "Ninja"))
 

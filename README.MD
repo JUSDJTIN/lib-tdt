@@ -1,8 +1,9 @@
+
 # Intel(R) Threat Detection Technology (TDT)
 
 Intel(R) Threat Detection Technology comprises of a set of libraries and a public API interface that uses low level CPU telemetry data to perform early detection of advanced malware threats. It is intended for Independent Security Vendors (ISVs) and Cloud Service Providers (CSPs) to integrate with their security solutions and add signature less hardware based runtime threat detection capability. Through its solution stack Intel TDT enables deployment of advanced machine learning based classification and modeling algorithms to learn system behaviors and profile threats with CPU telemetry as feature vectors. Upon detection of malicious activity notifications are generated for further investigation and remediation by the integrating security application. TDT’s APIs, telemetry framework and Machine Learning pipeline also provide security applications the opportunity to build their own detection heuristics to address threats of interest to them.
 
-More information can be found at [https://01.org/intel-secl] (https://01.org/intel-secl).
+More information can be found at https://01.org/intel-secl.
 
 ## Intel(R) Security Libraries (SecL) – DC integration
 Intel® SecL-TDT is a new feature set added to Intel® SecL-DC security solutions for adding runtime threat detection and anomaly detection support with hardware telemetry and machine learning in the data center and cloud.
@@ -17,9 +18,9 @@ Refer to Intel(R) SecL-TDT documentation to use TDT with Intel(R) SecL.
 
 Public API intended for applications integrating TDT libraries.
 
-`C – Application\library\tdt_agent.h`
-`C++ – Application\library\tdt_agent.hpp`
-`Go - Application\library\golang\src\tdt_lib\tdt_agent.go`
+    C – Application\library\tdt_agent.h
+    C++ – Application\library\tdt_agent.hpp
+    Go - Application\library\golang\src\tdt_lib\tdt_agent.go
 
 Please refer to code documentation in the headers for invocation details.
 
@@ -39,16 +40,16 @@ A minimum of 8GBs of RAM is recommended.
 
 * Linux Kernel 3.1 or up
 
-* [CMake] (https://cmake.org/) 3.11.2 or up
+* CMake (https://cmake.org/) 3.11.2 or up
 * GCC
 
     - 7.x or better on non-RHEL distributions
 
     - 4.8.5 or better with devtoolset-7 on RHEL distributions
 
-* [Boost] (https://www.boost.org/) 1.68 or up.
+* Boost (https://www.boost.org/) 1.68 or up.
 
-* [Intel Thread Building Blocks (TBB)] (https://software.intel.com/en-us/intel-tbb)
+* Intel Thread Building Blocks (TBB) (https://software.intel.com/en-us/intel-tbb)
 
 * perf (included with kernel). This is required for execution only, no build dependencies.
 
@@ -58,34 +59,73 @@ The TDT PMU publisher plugin interfaces with the perf kernel module that comes b
 
 Security applications integrating TDT may execute directly with root/admin privileges. Alternatively, administrators can use kernel namespaces and control groups to allow perf_event subsystem access for the app from the non-root user or isolation context (e.g. containers) it is executing in.
 
+## Step By Step Build Instructions
 
-### Build Instructions
+### Prerequisites
 
-TDT is built using cmake.
 
-* Open a terminal and set proxy settings allow download of Boost and TBB automatically (This step is only required in case of using proxy to access the Internet)
-`$ export HTTP_PROXY=http://<proxy>:<port>`
-`$ export HTTPS_PROXY=https://<proxy>:<port>`
+Please make sure that you have the right `http proxy` settings if you are behind a proxy
+```shell
+export HTTP_PROXY=http://<proxy>:<port>
+export HTTPS_PROXY=https://<proxy>:<port>
+```
 
-* Navigate to the root of the TDT source directory
 
-* Create the build directory and configure and build the TDT libraries and release package
-`$ ./compile.sh`
+### Install `GCC 7.x` or newer
+The current repos including repos with a subscription manager does not have rpm packages to install the required version of `GCC`. We shall rely on `devtoolset-7` to install the required version of `GCC`.
 
-* The built binaries and configuration files will be copied to the release_package folder in the source root folder.
+*Note : installing `devtoolset-7` requires access to the subscription manager. Please contact your system administrator to configure your build server with access the subscription manager*
+
+1. On RHEL, enable RHSCL repository for system
+```shell
+sudo yum-config-manager --enable rhel-server-rhscl-7-rpms
+```
+2. Install the devtoolset-7
+```shell
+sudo yum install devtoolset-7
+```
+*Note: Install ‘yum install -y yum-utils’ if yum-config-manager command is not available*
+
+### Install `cmake 3.11.2` or newer
+`cmake` versions available in `RHEL` repos is not compatible with building the `Threat Detection Libraries`. You will therefore need to install a version of `cmake` that is available directly at https://cmake.org. Future version of RHEL or updated repositories may contain `cmake` version that are compatible. But currently, the following is what has been verified to work.
+
+```shell
+sudo yum remove cmake
+wget https://github.com/Kitware/CMake/releases/download/v3.14.0/cmake-3.14.0-Linux-x86_64.sh
+chmod +x cmake-3.14.0-Linux-x86_64.sh
+sudo ./cmake-3.14.0-Linux-x86_64.sh --skip-license --include-subdir --prefix=/usr/local
+export PATH=$PATH:/usr/local/cmake-3.14.0-Linux-x86_64/bin
+```
+## Build `Threat Detection Technology (TDT)` Library
+
+A build script is provided at the root folder of the repository that is used for building. It will download the required `Boost` and `Intel Thread Building Blocks (Tbb)` components.
+
+The following are the steps to download and build the  `Threat Detection Technology (TDT)` Library
+
+- Git clone
+- Run build script
+```shell
+git clone https://github.com/intel-secl/lib-tdt.git
+cd lib-tdt
+./compile.sh
+cd ..
+```
+
+The built binaries and configuration files will be copied to the `release_package` folder in the source root folder.
 
 ## Support
 
 ### Mailing List
 
-TDT Libraries and Telemetry Framework – [tdt.ae@intel.com] (mailto://tdt.ae@intel.com)
+TDT Libraries and Telemetry Framework – tdt.ae@intel.com
 
-TDT-Intel® SecL integration - [https://01.org/intel-secl] (https://01.org/intel-secl)
+TDT-Intel® SecL integration - https://01.org/intel-secl
 
 ## Bugs
 
-Bugs and security vulnerabilities can be reported on the mailing list or using our bug tracking system, at [https://github.com/intel/isecl/issues] (https://github.com/intel/isecl/issues).
+Bugs and security vulnerabilities can be reported on the mailing list or using our bug tracking system, at https://github.com/intel/isecl/issues.
 
 ## Documentation
 
-Product documentation and tutorials can be found at [https://01.org/intel-secl] (https://01.org/intel-secl).
+Product documentation and tutorials can be found at https://01.org/intel-secl.
+

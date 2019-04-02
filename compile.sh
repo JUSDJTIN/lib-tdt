@@ -37,7 +37,7 @@ then
     exit 4
 fi
 
-CMAKE_BUILD_PARALLEL_LEVEL=$(nproc)
+export CMAKE_BUILD_PARALLEL_LEVEL=$(nproc)
 cmake .. -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_BUILD_TYPE=Release
 if [ $? -ne 0 ];
 then
